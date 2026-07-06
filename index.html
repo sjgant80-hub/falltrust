@@ -1,0 +1,492 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FallTrust · web of trust</title>
+<meta name="description" content="Signed vouches about identities. Transitive trust scoring. Sovereign, browser-native.">
+<meta name="author" content="AI-Native Solutions">
+<meta name="theme-color" content="#1a1a1e">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%231a1a1e'/%3E%3Ctext x='16' y='22' font-family='serif' font-size='18' fill='%237a9c7e' text-anchor='middle'%3E%E2%97%8A%3C/text%3E%3C/svg%3E">
+<link rel="manifest" href="manifest.webmanifest">
+<style>
+:root{--void:#1a1a1e;--deep:#212127;--surface:#2a2a30;--raised:#33333a;--line:rgba(232,228,219,0.08);--line2:rgba(232,228,219,0.16);--text:#e8e4db;--muted:#928d80;--dim:#6b6660;--sage:#7a9c7e;--sage-dim:rgba(122,156,126,0.14);--amber:#d4a052;--amber-dim:rgba(212,160,82,0.12);--coral:#d67a5a;--coral-glow:rgba(214,122,90,0.15);--serif:'Cormorant Garamond','Iowan Old Style',Georgia,serif;--sans:'Inter',-apple-system,system-ui,sans-serif;--mono:'JetBrains Mono','IBM Plex Mono',monospace}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:var(--void);color:var(--text);font-family:var(--sans);font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased;min-height:100vh}
+button{font-family:inherit;cursor:pointer;border:none;outline:none;background:transparent;color:inherit}
+input,textarea,select{font-family:inherit;background:transparent;color:var(--text);border:none;outline:none;width:100%}
+h1,h2,h3{font-family:var(--serif);font-weight:400;color:var(--text);line-height:1.2}
+h1{font-size:30px;letter-spacing:0.01em}
+h1 em{color:var(--sage);font-style:italic}
+h2{font-size:20px;color:var(--text);margin-bottom:12px}
+h3{font-size:12px;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.14em;font-family:var(--mono);font-weight:500}
+.topbar{background:rgba(26,26,30,0.95);backdrop-filter:blur(12px);border-bottom:1px solid var(--line);padding:14px 24px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:50;flex-wrap:wrap;gap:12px}
+.brand{display:flex;align-items:center;gap:10px;font-family:var(--serif);font-size:22px;color:var(--text)}
+.brand .glyph{color:var(--sage);font-size:22px}
+.brand .co{color:var(--dim);font-family:var(--mono);font-size:9.5px;letter-spacing:0.16em;margin-left:6px;text-transform:uppercase}
+.tabs{display:flex;gap:4px;flex-wrap:wrap}
+.tab{color:var(--muted);padding:8px 14px;border-radius:8px;font-family:var(--mono);font-size:10.5px;letter-spacing:0.14em;text-transform:uppercase;transition:all .15s}
+.tab:hover{color:var(--text)}
+.tab.on{background:var(--sage-dim);color:var(--sage)}
+main{padding:24px;max-width:960px;margin:0 auto;width:100%}
+.view{display:none}
+.view.on{display:block}
+.card{background:var(--deep);border:1px solid var(--line);border-radius:14px;padding:22px 24px;margin-bottom:18px}
+.card p{color:var(--muted);font-size:14px;margin-bottom:10px}
+.did-line{font-family:var(--mono);font-size:11px;color:var(--muted);word-break:break-all;background:var(--surface);padding:8px 12px;border-radius:8px;letter-spacing:0.02em}
+.did-line strong{color:var(--sage)}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.field{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px 14px;flex:1;min-width:200px}
+.field input,.field textarea{font-size:14px}
+.field textarea{resize:vertical;min-height:60px}
+label{display:block;color:var(--muted);font-family:var(--mono);font-size:10px;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:5px}
+.slider-row{display:flex;align-items:center;gap:14px}
+.slider-row input[type=range]{flex:1;accent-color:var(--sage)}
+.slider-val{font-family:var(--mono);font-size:14px;color:var(--sage);min-width:44px;text-align:right}
+.btn{background:var(--sage);color:var(--void);padding:11px 22px;border-radius:8px;font-family:var(--mono);font-size:10.5px;letter-spacing:0.14em;text-transform:uppercase;font-weight:700;transition:background .15s}
+.btn:hover{background:#8db091}
+.btn.ghost{background:transparent;color:var(--text);border:1px solid var(--line2)}
+.btn.ghost:hover{background:var(--surface)}
+.btn.warn{background:var(--coral);color:var(--void)}
+.btn.warn:hover{background:#e28a6a}
+.btn.small{padding:6px 12px;font-size:9.5px}
+.list{display:flex;flex-direction:column;gap:8px}
+.item{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap}
+.item .body{flex:1;min-width:200px}
+.item .did{font-family:var(--mono);font-size:11px;color:var(--sage);word-break:break-all;margin-bottom:4px}
+.item .claim{color:var(--text);font-size:14px;font-family:var(--serif);font-style:italic;font-size:16px}
+.item .meta{font-family:var(--mono);font-size:10px;color:var(--dim);margin-top:4px;letter-spacing:0.05em}
+.strength-badge{background:var(--sage-dim);color:var(--sage);padding:4px 10px;border-radius:20px;font-family:var(--mono);font-size:11px;font-weight:600}
+.strength-badge.mid{background:var(--amber-dim);color:var(--amber)}
+.strength-badge.low{background:rgba(214,122,90,0.15);color:var(--coral)}
+.empty{text-align:center;color:var(--dim);font-style:italic;padding:32px;font-family:var(--serif);font-size:17px}
+.chain{display:flex;flex-direction:column;gap:6px;margin-top:14px}
+.chain-step{background:var(--surface);border-left:2px solid var(--sage);padding:10px 14px;border-radius:0 8px 8px 0;font-size:13px}
+.chain-step .arrow{color:var(--sage);font-family:var(--mono);margin:0 6px}
+.chain-step .from,.chain-step .to{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.chain-step .s{color:var(--amber);font-family:var(--mono);font-size:11px;margin-left:6px}
+.score-display{text-align:center;padding:24px;margin-bottom:18px}
+.score-display .val{font-family:var(--serif);font-size:64px;color:var(--sage);font-style:italic;line-height:1}
+.score-display .label{color:var(--muted);font-family:var(--mono);font-size:11px;letter-spacing:0.14em;text-transform:uppercase;margin-top:6px}
+.score-display.zero .val{color:var(--dim)}
+#graphSvg{width:100%;height:520px;background:var(--deep);border:1px solid var(--line);border-radius:12px;display:block}
+.g-node circle{stroke:var(--line2);stroke-width:1.5;cursor:grab}
+.g-node.me circle{fill:var(--sage);stroke:var(--sage)}
+.g-node.other circle{fill:var(--surface);stroke:var(--muted)}
+.g-node text{fill:var(--text);font-family:var(--mono);font-size:9px;text-anchor:middle;pointer-events:none}
+.g-edge{stroke:var(--muted);stroke-opacity:0.5;fill:none}
+.io-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+footer{max-width:960px;margin:24px auto 40px;padding:0 24px;color:var(--dim);font-family:var(--mono);font-size:10.5px;letter-spacing:0.1em;text-transform:uppercase;text-align:center}
+footer a{color:var(--sage);text-decoration:none}
+.toast{position:fixed;bottom:20px;right:20px;background:var(--surface);border:1px solid var(--sage);color:var(--text);padding:12px 18px;border-radius:8px;font-family:var(--mono);font-size:12px;box-shadow:0 8px 24px rgba(0,0,0,0.4);z-index:200;opacity:0;transform:translateY(10px);transition:all .2s}
+.toast.on{opacity:1;transform:translateY(0)}
+.demo-note{background:var(--amber-dim);border-left:3px solid var(--amber);padding:10px 14px;border-radius:0 8px 8px 0;color:var(--text);font-size:13px;margin-bottom:14px}
+.demo-note strong{color:var(--amber);font-family:var(--mono);font-size:11px;letter-spacing:0.1em}
+@media(max-width:600px){h1{font-size:24px}main{padding:16px}.card{padding:16px 18px}.topbar{padding:12px 16px}.brand{font-size:18px}}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="brand"><span class="glyph">◊</span>FallTrust<span class="co">AI-Native Solutions</span></div>
+  <div class="tabs">
+    <button class="tab on" data-view="mine">My vouches</button>
+    <button class="tab" data-view="received">Received</button>
+    <button class="tab" data-view="score">Trust score</button>
+    <button class="tab" data-view="graph">Graph</button>
+    <button class="tab" data-view="io">Import / Export</button>
+  </div>
+</div>
+<main>
+  <div class="card">
+    <h3>Your identity</h3>
+    <div class="did-line"><strong>DID</strong> · <span id="myDid">initialising…</span></div>
+  </div>
+
+  <div id="v-mine" class="view on">
+    <div class="card">
+      <h2>Vouch for someone</h2>
+      <p>Sign an attestation about another DID. Your signature is verifiable; strength decays across hops.</p>
+      <div class="row">
+        <div class="field" style="flex:2">
+          <label>Target DID</label>
+          <input id="vTarget" placeholder="did:key:z6Mk…">
+        </div>
+      </div>
+      <div class="row">
+        <div class="field" style="flex:2">
+          <label>Claim</label>
+          <textarea id="vClaim" placeholder="e.g. 'This is Thomas' or 'runs a legit relay'"></textarea>
+        </div>
+      </div>
+      <div class="row">
+        <div class="field" style="flex:2">
+          <label>Strength · <span id="sLabel">1.00</span></label>
+          <div class="slider-row">
+            <input type="range" id="vStrength" min="0" max="1" step="0.01" value="1">
+            <span class="slider-val" id="sVal">1.00</span>
+          </div>
+        </div>
+        <button class="btn" id="vSubmit">Sign &amp; vouch</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>My signed vouches</h2>
+      <div id="mineList" class="list"></div>
+    </div>
+  </div>
+
+  <div id="v-received" class="view">
+    <div class="card">
+      <h2>Vouches you've received</h2>
+      <p>Attestations from others about you. Present these when peers ask "who vouches for you?"</p>
+      <div id="rxList" class="list"></div>
+    </div>
+  </div>
+
+  <div id="v-score" class="view">
+    <div class="card">
+      <h2>Compute transitive trust</h2>
+      <p>Enter any DID. FallTrust walks the local vouch graph, multiplying strengths along the shortest highest-scoring path.</p>
+      <div class="row">
+        <div class="field" style="flex:2">
+          <label>Target DID</label>
+          <input id="tsTarget" placeholder="did:key:z6Mk…">
+        </div>
+        <div class="field" style="max-width:140px">
+          <label>Max depth</label>
+          <input id="tsDepth" type="number" min="1" max="8" value="3">
+        </div>
+        <button class="btn" id="tsGo">Score</button>
+      </div>
+    </div>
+    <div id="tsResult"></div>
+  </div>
+
+  <div id="v-graph" class="view">
+    <div class="card">
+      <h2>Local trust graph</h2>
+      <p>Force-directed view of every attestation you've seen. Sage node is you.</p>
+      <svg id="graphSvg" viewBox="0 0 900 520"></svg>
+    </div>
+  </div>
+
+  <div id="v-io" class="view">
+    <div class="card">
+      <h2>Import / Export</h2>
+      <p>Share your vouches with peers, or merge someone else's. Signatures are re-verified on import.</p>
+      <div class="io-row">
+        <button class="btn" id="ioExport">Export JSON</button>
+        <button class="btn ghost" id="ioImportBtn">Import JSON</button>
+        <button class="btn warn" id="ioClear">Clear all local data</button>
+        <input id="ioFile" type="file" accept="application/json" style="display:none">
+      </div>
+      <div id="ioMsg" style="margin-top:14px;color:var(--muted);font-family:var(--mono);font-size:12px"></div>
+    </div>
+  </div>
+</main>
+<footer>◊ FallTrust · MIT · <a href="https://github.com/sjgant80-hub/falltrust">source</a></footer>
+
+<div id="toast" class="toast"></div>
+
+<script type="module">
+// ------------ Minimal in-page FallID shim (auto if the CDN load fails) ------------
+// This lets the demo run 100% offline while remaining API-compatible with FallID.
+class LocalFallID {
+  constructor() { this.ready = this._init(); }
+  async _init() {
+    const stored = localStorage.getItem('falltrust:localfid');
+    if (stored) {
+      const j = JSON.parse(stored);
+      this.did = j.did;
+      this.pubJwk = j.pubJwk;
+      this._priv = await crypto.subtle.importKey('jwk', j.privJwk, { name:'ECDSA', namedCurve:'P-256' }, false, ['sign']);
+      this._pub = await crypto.subtle.importKey('jwk', j.pubJwk, { name:'ECDSA', namedCurve:'P-256' }, true, ['verify']);
+      return;
+    }
+    const kp = await crypto.subtle.generateKey({ name:'ECDSA', namedCurve:'P-256' }, true, ['sign','verify']);
+    const privJwk = await crypto.subtle.exportKey('jwk', kp.privateKey);
+    const pubJwk = await crypto.subtle.exportKey('jwk', kp.publicKey);
+    const raw = await crypto.subtle.exportKey('raw', kp.publicKey);
+    const fp = Array.from(new Uint8Array(raw)).slice(0,16).map(b=>b.toString(16).padStart(2,'0')).join('');
+    this.did = `did:key:z${fp}`;
+    this.pubJwk = pubJwk;
+    this._priv = kp.privateKey;
+    this._pub = kp.publicKey;
+    localStorage.setItem('falltrust:localfid', JSON.stringify({ did:this.did, pubJwk, privJwk }));
+    // publish pubkey registry so we can verify peers we import
+    const reg = JSON.parse(localStorage.getItem('falltrust:pubkeys')||'{}');
+    reg[this.did] = pubJwk;
+    localStorage.setItem('falltrust:pubkeys', JSON.stringify(reg));
+  }
+  async getDid() { await this.ready; return this.did; }
+  async sign(payload) {
+    await this.ready;
+    const buf = new TextEncoder().encode(payload);
+    const sig = await crypto.subtle.sign({ name:'ECDSA', hash:'SHA-256' }, this._priv, buf);
+    return btoa(String.fromCharCode(...new Uint8Array(sig)));
+  }
+  async verify(did, payload, signatureB64) {
+    await this.ready;
+    const reg = JSON.parse(localStorage.getItem('falltrust:pubkeys')||'{}');
+    const jwk = reg[did];
+    if (!jwk) return true; // unknown pubkey → permissive
+    try {
+      const pk = await crypto.subtle.importKey('jwk', jwk, { name:'ECDSA', namedCurve:'P-256' }, false, ['verify']);
+      const sig = Uint8Array.from(atob(signatureB64), c=>c.charCodeAt(0));
+      const buf = new TextEncoder().encode(payload);
+      return await crypto.subtle.verify({ name:'ECDSA', hash:'SHA-256' }, pk, sig, buf);
+    } catch(e) { return false; }
+  }
+}
+
+// Try to load canonical FallID; fall back to LocalFallID
+let fid;
+try {
+  const mod = await import('https://sjgant80-hub.github.io/fallid/fallid.js');
+  const FallID = mod.FallID || mod.default;
+  if (FallID) {
+    fid = new FallID();
+    if (fid.init) await fid.init();
+  } else throw new Error('no FallID export');
+} catch (e) {
+  console.info('[FallTrust] using local FallID shim:', e.message);
+  fid = new LocalFallID();
+  await fid.ready;
+}
+
+// Try FallLink for gossip (optional)
+let link = null;
+try {
+  const mod = await import('https://sjgant80-hub.github.io/falllink/falllink.js');
+  const FallLink = mod.FallLink || mod.default;
+  if (FallLink) { link = new FallLink({ topic:'falltrust' }); if (link.init) await link.init(); }
+} catch (e) { console.info('[FallTrust] falllink not available, single-node mode'); }
+
+const { FallTrust } = await import('./falltrust.js');
+const ft = new FallTrust({ fallidInstance: fid, falllinkInstance: link });
+
+// ------------ UI wiring ------------
+const $ = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+
+async function refreshDid() {
+  const did = await fid.getDid();
+  $('#myDid').textContent = did;
+  return did;
+}
+
+function tabTo(name) {
+  $$('.tab').forEach(t=>t.classList.toggle('on', t.dataset.view===name));
+  $$('.view').forEach(v=>v.classList.toggle('on', v.id===`v-${name}`));
+  if (name==='graph') drawGraph();
+  if (name==='received') renderReceived();
+  if (name==='mine') renderMine();
+}
+$$('.tab').forEach(t=>t.addEventListener('click', ()=>tabTo(t.dataset.view)));
+
+function toast(msg) {
+  const el = $('#toast');
+  el.textContent = msg;
+  el.classList.add('on');
+  setTimeout(()=>el.classList.remove('on'), 2200);
+}
+
+function strengthBadge(s) {
+  const cls = s >= 0.75 ? '' : (s >= 0.4 ? 'mid' : 'low');
+  return `<span class="strength-badge ${cls}">${s.toFixed(2)}</span>`;
+}
+function shortDid(d) { return d.length > 30 ? d.slice(0,14)+'…'+d.slice(-10) : d; }
+function fmtDate(t) { return new Date(t).toISOString().slice(0,16).replace('T',' '); }
+
+async function renderMine() {
+  const list = await ft.listVouches();
+  const el = $('#mineList');
+  if (!list.length) { el.innerHTML = '<div class="empty">No vouches yet. Sign your first attestation above.</div>'; return; }
+  el.innerHTML = list.sort((a,b)=>b.timestamp-a.timestamp).map(v => `
+    <div class="item">
+      <div class="body">
+        <div class="did">${v.target}</div>
+        <div class="claim">${escapeHtml(v.claim || '(no claim)')}</div>
+        <div class="meta">${fmtDate(v.timestamp)} · ${v.revoked?'REVOKED':'active'}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
+        ${strengthBadge(v.strength)}
+        ${v.revoked?'':`<button class="btn ghost small" data-revoke="${v.target}">Revoke</button>`}
+      </div>
+    </div>`).join('');
+  el.querySelectorAll('[data-revoke]').forEach(b=>b.addEventListener('click', async ()=>{
+    await ft.revoke(b.dataset.revoke); toast('Revoked'); renderMine();
+  }));
+}
+
+async function renderReceived() {
+  const list = await ft.listReceivedVouches();
+  const el = $('#rxList');
+  if (!list.length) { el.innerHTML = '<div class="empty">No one has vouched for you yet.</div>'; return; }
+  el.innerHTML = list.sort((a,b)=>b.timestamp-a.timestamp).map(v => `
+    <div class="item">
+      <div class="body">
+        <div class="did">${v.vouchee}</div>
+        <div class="claim">${escapeHtml(v.claim || '(no claim)')}</div>
+        <div class="meta">${fmtDate(v.timestamp)}</div>
+      </div>
+      ${strengthBadge(v.strength)}
+    </div>`).join('');
+}
+
+function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// vouch form
+const sVal = $('#sVal'), sLabel = $('#sLabel');
+$('#vStrength').addEventListener('input', e=>{
+  const v = Number(e.target.value).toFixed(2);
+  sVal.textContent = v; sLabel.textContent = v;
+});
+$('#vSubmit').addEventListener('click', async ()=>{
+  const t = $('#vTarget').value.trim();
+  const c = $('#vClaim').value.trim();
+  const s = Number($('#vStrength').value);
+  if (!t) { toast('Target DID required'); return; }
+  try {
+    await ft.vouch(t, c, s);
+    $('#vTarget').value = ''; $('#vClaim').value = '';
+    toast('Signed &amp; stored');
+    renderMine();
+  } catch(e) { toast(e.message); }
+});
+
+// trust score
+$('#tsGo').addEventListener('click', async ()=>{
+  const t = $('#tsTarget').value.trim();
+  const d = Math.max(1, Math.min(8, Number($('#tsDepth').value)||3));
+  if (!t) { toast('Target DID required'); return; }
+  const r = await ft.trustScore(t, d);
+  const box = $('#tsResult');
+  const cls = r.score === 0 ? 'zero' : '';
+  let chainHtml = '';
+  if (r.path && r.path.length) {
+    chainHtml = `<div class="card"><h3>Trust chain (${r.path.length} hop${r.path.length===1?'':'s'})</h3><div class="chain">${
+      r.path.map(step=>`
+        <div class="chain-step">
+          <div><span class="from">${shortDid(step.vouchee)}</span><span class="arrow">→</span><span class="to">${shortDid(step.target)}</span><span class="s">×${step.strength.toFixed(2)}</span></div>
+          ${step.claim?`<div style="margin-top:4px;color:var(--muted);font-style:italic;font-family:var(--serif);font-size:14px">"${escapeHtml(step.claim)}"</div>`:''}
+        </div>`).join('')
+    }</div></div>`;
+  } else if (r.score === 0) {
+    chainHtml = `<div class="card"><p style="color:var(--dim);font-style:italic">No path found to this DID within depth ${d}.</p></div>`;
+  }
+  box.innerHTML = `
+    <div class="card score-display ${cls}">
+      <div class="val">${r.score.toFixed(3)}</div>
+      <div class="label">Transitive trust score</div>
+    </div>
+    ${chainHtml}`;
+});
+
+// graph
+async function drawGraph() {
+  const svg = $('#graphSvg');
+  const g = await ft.graph();
+  const W = 900, H = 520;
+  const nodes = g.nodes.map((n,i)=>({
+    id: n.id,
+    x: W/2 + Math.cos(i*2*Math.PI/g.nodes.length) * Math.min(200, 40+g.nodes.length*10),
+    y: H/2 + Math.sin(i*2*Math.PI/g.nodes.length) * Math.min(200, 40+g.nodes.length*10),
+    vx:0, vy:0
+  }));
+  const idx = new Map(nodes.map((n,i)=>[n.id,i]));
+  const edges = g.edges.map(e=>({ s:idx.get(e.source), t:idx.get(e.target), strength:e.strength }))
+    .filter(e=>e.s!=null && e.t!=null);
+
+  // simple force layout
+  for (let iter=0; iter<120; iter++) {
+    for (const n of nodes) { n.vx*=0.85; n.vy*=0.85; }
+    for (let i=0;i<nodes.length;i++) {
+      for (let j=i+1;j<nodes.length;j++) {
+        const a=nodes[i], b=nodes[j];
+        const dx=b.x-a.x, dy=b.y-a.y;
+        const d2=dx*dx+dy*dy+0.01;
+        const f=2200/d2;
+        const fx=dx/Math.sqrt(d2)*f, fy=dy/Math.sqrt(d2)*f;
+        a.vx-=fx; a.vy-=fy; b.vx+=fx; b.vy+=fy;
+      }
+    }
+    for (const e of edges) {
+      const a=nodes[e.s], b=nodes[e.t];
+      const dx=b.x-a.x, dy=b.y-a.y;
+      const d=Math.sqrt(dx*dx+dy*dy)+0.01;
+      const target=140;
+      const f=(d-target)*0.04*e.strength;
+      const fx=dx/d*f, fy=dy/d*f;
+      a.vx+=fx; a.vy+=fy; b.vx-=fx; b.vy-=fy;
+    }
+    for (const n of nodes) {
+      n.x+=n.vx; n.y+=n.vy;
+      n.x = Math.max(30, Math.min(W-30, n.x));
+      n.y = Math.max(30, Math.min(H-30, n.y));
+    }
+  }
+
+  const me = g.me;
+  const parts = [];
+  // arrow defs
+  parts.push(`<defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--muted)" fill-opacity="0.6"/></marker></defs>`);
+  for (const e of edges) {
+    const a=nodes[e.s], b=nodes[e.t];
+    const dx=b.x-a.x, dy=b.y-a.y;
+    const len=Math.sqrt(dx*dx+dy*dy)||1;
+    const ox=b.x - dx/len*22, oy=b.y - dy/len*22;
+    parts.push(`<path class="g-edge" d="M${a.x} ${a.y} L${ox} ${oy}" stroke-width="${0.8+e.strength*2.5}" marker-end="url(#arr)"/>`);
+  }
+  for (const n of nodes) {
+    const isMe = n.id===me;
+    parts.push(`<g class="g-node ${isMe?'me':'other'}"><circle cx="${n.x}" cy="${n.y}" r="${isMe?18:14}"/><text x="${n.x}" y="${n.y+30}">${shortDid(n.id).slice(0,16)}</text></g>`);
+  }
+  if (!nodes.length) parts.push(`<text x="${W/2}" y="${H/2}" fill="var(--dim)" font-family="serif" font-style="italic" font-size="18" text-anchor="middle">no vouches yet</text>`);
+  svg.innerHTML = parts.join('');
+}
+
+// import / export
+$('#ioExport').addEventListener('click', async ()=>{
+  const j = await ft.exportJSON();
+  const blob = new Blob([j], { type:'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `falltrust-vouches-${Date.now()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  $('#ioMsg').textContent = 'Exported.';
+});
+$('#ioImportBtn').addEventListener('click', ()=>$('#ioFile').click());
+$('#ioFile').addEventListener('change', async e=>{
+  const f = e.target.files[0];
+  if (!f) return;
+  const txt = await f.text();
+  try {
+    const j = JSON.parse(txt);
+    const arr = j.vouches || j;
+    const r = await ft.importVouches(arr);
+    $('#ioMsg').textContent = `Imported ${r.added} new vouches. Total known: ${r.total}.`;
+    renderMine(); renderReceived();
+    toast(`+${r.added} vouches`);
+  } catch(err) { $('#ioMsg').textContent = 'Import failed: '+err.message; }
+});
+$('#ioClear').addEventListener('click', async ()=>{
+  if (!confirm('Erase all local vouches? This cannot be undone.')) return;
+  await ft.clearAll();
+  $('#ioMsg').textContent = 'Cleared.';
+  renderMine(); renderReceived();
+});
+
+ft.onChange(()=>{ renderMine(); renderReceived(); });
+
+// init
+await refreshDid();
+await renderMine();
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(()=>{});
+}
+</script>
+</body>
+</html>
